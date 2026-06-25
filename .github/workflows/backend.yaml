@@ -169,9 +169,6 @@ jobs:
           # Tell Ansible to use the system SSH config
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
-          # 1. Generate the SSH config alias
-          gcloud compute config-ssh --use-tunnel-through-iap --quiet
-          # 2. Construct the alias name
           # Format: [INSTANCE].[ZONE].[PROJECT]
           ALIAS="elastic-search.asia-south1-a.${{ secrets.GCP_PROJECT_ID }}"
           ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
