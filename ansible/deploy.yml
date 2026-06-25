@@ -1,0 +1,36 @@
+- name: Deploy Application to VM
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Create app directory
+      file:
+        path: /opt/my-app
+        state: directory
+        owner: ubuntu
+
+    - name: Configure Docker Auth on VM
+      # This allows the VM to pull from Artifact Registry using its own Service Account permissions
+      shell: gcloud auth configure-docker {{ region }}-docker.pkg.dev --quiet
+
+    - name: Create .env file
+      copy:
+        dest: /opt/my-app/.env
+        content: |
+          STRAPI_IMAGE={{ strapi_image | default(omit) }}
+          FRONTEND_IMAGE={{ frontend_image | default(omit) }}
+          DATABASE_HOST={{ db_host }}
+          DATABASE_PASSWORD={{ db_password }}
+          DATABASE_NAME=strapi
+          DATABASE_USERNAME=strapi
+          NODE_ENV=production
+
+    - name: Copy docker-compose.yml
+      copy:
+        src: ../docker-compose.yml
+        dest: /opt/my-app/docker-compose.yml
+
+    - name: Pull and Restart Containers
+      shell: |
+        cd /opt/my-app
+        docker compose pull
+        docker compose up -d --remove-orphans
