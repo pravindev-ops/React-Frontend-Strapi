@@ -164,6 +164,14 @@ jobs:
           echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+      - name: Debug SSH Connection
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          # 1. Try to open the tunnel manually to see the error
+          echo "Testing IAP Tunnel..."
+          gcloud compute ssh elastic-search --zone=asia-south1-a --tunnel-through-iap --command="whoami" --quiet
+
       - name: Run Ansible via IAP Tunnel
         env:
           CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
