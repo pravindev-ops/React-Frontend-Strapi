@@ -16,7 +16,6 @@
         dest: /opt/my-app/.env
         content: |
           STRAPI_IMAGE={{ strapi_image }}
-          FRONTEND_IMAGE={{ frontend_image }}
           DATABASE_HOST={{ db_host }}
           DATABASE_PASSWORD={{ db_password }}
           DATABASE_NAME=strapi
