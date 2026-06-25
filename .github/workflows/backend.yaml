@@ -155,15 +155,17 @@ jobs:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      # NEW: This action sets up the tunnel and keys for you
-      - name: Configure SSH for IAP
-        # This command creates a ~/.ssh/config entry for your VM 
-        # using the correct IAP tunnel settings automatically.
-        run: |
-          gcloud compute config-ssh --use-tunnel-through-iap --quiet
+      - id: 'compute-ssh'
+        uses: 'google-github-actions/ssh-compute@v2'
+        with:
+          instance_name: 'elastic-search'
+          zone: 'asia-south1-a'
+          ssh_private_key: '${{ secrets.VM_SSH_KEY }}'
+          command: 'echo Hello world'
 
       - name: Run Ansible
         env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           # Tell Ansible to use the system SSH config
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
