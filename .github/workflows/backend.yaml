@@ -147,36 +147,83 @@ jobs:
 #    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
 
+      - uses: actions/checkout@v4
       - id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      - id: 'compute-ssh'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Bundle and Upload Files
+        run: |
+          # Create a deployment package
+          mkdir -p deploy
+          cp -r ansible/ deploy/
+          cp docker-compose.yml deploy/
+          tar -czf deploy.tar.gz deploy/
+
+          # Upload via IAP tunnel
+          gcloud compute scp deploy.tar.gz elastic-search:/tmp/deploy.tar.gz \
+            --zone=asia-south1-a \
+            --tunnel-through-iap \
+            --quiet
+
+      - name: Run Ansible Locally on VM
         uses: 'google-github-actions/ssh-compute@v2'
         with:
           instance_name: 'elastic-search'
           zone: 'asia-south1-a'
           ssh_private_key: '${{ secrets.VM_SSH_KEY }}'
-          command: 'echo Hello world'
+          # This runs INSIDE the VM
+          command: |
+            # 1. Install Ansible (only if not present)
+            if ! command -v ansible-playbook &> /dev/null; then
+              sudo apt-get update && sudo apt-get install -y ansible
+            fi
 
-      - name: Run Ansible
-        env:
-          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          # Tell Ansible to use the system SSH config
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          # Format: [INSTANCE].[ZONE].[PROJECT]
-          ALIAS="elastic-search.asia-south1-a.${{ secrets.GCP_PROJECT_ID }}"
-          ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
-            -e "ansible_host=$ALIAS" \
-            -e "strapi_image=4a1fc39" \
-            -e "db_host=${{ secrets.DB_HOST }}" \
-            -e "db_password=${{ secrets.DB_PASSWORD }}" \
-            -e "region=${{ env.REGION }}"
+            # 2. Extract and run
+            cd /tmp
+            tar -xzf deploy.tar.gz
+            cd deploy/ansible
+            
+            ansible-playbook -i inventory.ini deploy.yml \
+              -e "strapi_image=4a1fc39" \
+              -e "db_host=${{ secrets.DB_HOST }}" \
+              -e "db_password=${{ secrets.DB_PASSWORD }}" \
+              -e "region=${{ env.REGION }}"
+      # - uses: actions/checkout@v4
+
+      # - id: auth
+      #   uses: google-github-actions/auth@v2
+      #   with:
+      #     workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+      #     service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      # - id: 'compute-ssh'
+      #   uses: 'google-github-actions/ssh-compute@v2'
+      #   with:
+      #     instance_name: 'elastic-search'
+      #     zone: 'asia-south1-a'
+      #     ssh_private_key: '${{ secrets.VM_SSH_KEY }}'
+      #     command: 'echo Hello world'
+
+      # - name: Run Ansible
+      #   env:
+      #     PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      #     # Tell Ansible to use the system SSH config
+      #     ANSIBLE_HOST_KEY_CHECKING: "False"
+      #   run: |
+      #     # Format: [INSTANCE].[ZONE].[PROJECT]
+      #     ALIAS="elastic-search.asia-south1-a.${{ secrets.GCP_PROJECT_ID }}"
+      #     ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
+      #       -e "strapi_image=4a1fc39" \
+      #       -e "db_host=${{ secrets.DB_HOST }}" \
+      #       -e "db_password=${{ secrets.DB_PASSWORD }}" \
+      #       -e "region=${{ env.REGION }}"
 
       # - name: Set up Cloud SDK
       #   uses: google-github-actions/setup-gcloud@v2
