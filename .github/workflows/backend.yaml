@@ -91,60 +91,60 @@ env:
   GAR_REPO: preveen-repo
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    outputs:
-      strapi_tag: ${{ steps.meta-backend.outputs.tags }}
-      frontend_tag: ${{ steps.meta-frontend.outputs.tags }}
-    steps:
-      - uses: actions/checkout@v4
+  # build-and-push:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     strapi_tag: ${{ steps.meta-backend.outputs.tags }}
+  #     frontend_tag: ${{ steps.meta-frontend.outputs.tags }}
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-          token_format: 'access_token'
+  #     - id: auth
+  #       uses: google-github-actions/auth@v2
+  #       with:
+  #         workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+  #         service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+  #         token_format: 'access_token'
 
-      - name: Docker Login
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGION }}-docker.pkg.dev
-          username: 'oauth2accesstoken'
-          password: ${{ steps.auth.outputs.access_token }}
+  #     - name: Docker Login
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ${{ env.REGION }}-docker.pkg.dev
+  #         username: 'oauth2accesstoken'
+  #         password: ${{ steps.auth.outputs.access_token }}
 
-      # Backend Build
-      - name: Meta Backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/strapi-backend
-          tags: type=sha,prefix=,suffix=,format=short
+  #     # Backend Build
+  #     - name: Meta Backend
+  #       id: meta-backend
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/strapi-backend
+  #         tags: type=sha,prefix=,suffix=,format=short
 
-      - name: Build Backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend-app
-          push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
+  #     - name: Build Backend
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: ./backend-app
+  #         push: true
+  #         tags: ${{ steps.meta-backend.outputs.tags }}
 
-      # Frontend Build
-      - name: Meta Frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/node-frontend
-          tags: type=sha,prefix=,suffix=,format=short
+  #     # Frontend Build
+  #     - name: Meta Frontend
+  #       id: meta-frontend
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/node-frontend
+  #         tags: type=sha,prefix=,suffix=,format=short
 
-      # - name: Build Frontend
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: ./frontend-app
-      #     push: true
-      #     tags: ${{ steps.meta-frontend.outputs.tags }}
+  #     # - name: Build Frontend
+  #     #   uses: docker/build-push-action@v5
+  #     #   with:
+  #     #     context: ./frontend-app
+  #     #     push: true
+  #     #     tags: ${{ steps.meta-frontend.outputs.tags }}
 
   deploy:
-    needs: build-and-push
+#    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -170,8 +170,7 @@ jobs:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
           ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
-            -e "strapi_image=${{ needs.build-and-push.outputs.strapi_tag }}" \
-            -e "frontend_image=${{ needs.build-and-push.outputs.frontend_tag }}" \
+            -e "strapi_image=4a1fc39" \
             -e "db_host=${{ secrets.DB_HOST }}" \
             -e "db_password=${{ secrets.DB_PASSWORD }}" \
             -e "region=${{ env.REGION }}"
