@@ -136,12 +136,12 @@ jobs:
           images: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/node-frontend
           tags: type=sha,prefix=,suffix=,format=short
 
-      - name: Build Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend-app
-          push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
+      # - name: Build Frontend
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./frontend-app
+      #     push: true
+      #     tags: ${{ steps.meta-frontend.outputs.tags }}
 
   deploy:
     needs: build-and-push
