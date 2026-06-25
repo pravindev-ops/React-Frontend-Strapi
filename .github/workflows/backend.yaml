@@ -143,71 +143,70 @@ jobs:
   #     #     push: true
   #     #     tags: ${{ steps.meta-frontend.outputs.tags }}
 
-  deploy:
-#    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+#   deploy:
+# #    needs: build-and-push
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
 
-      - id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+#       - id: auth
+#         uses: google-github-actions/auth@v2
+#         with:
+#           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+#           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+#       - name: Set up Cloud SDK
+#         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Bundle and Upload Files
-        run: |
-          # 1. Create a deployment package
-          mkdir -p deploy
-          cp -r ansible/ deploy/
-          cp docker-compose.yml deploy/
-          tar -czf deploy.tar.gz deploy/
+#       - name: Bundle and Upload Files
+#         run: |
+#           # 1. Create a deployment package
+#           mkdir -p deploy
+#           cp -r ansible/ deploy/
+#           cp docker-compose.yml deploy/
+#           tar -czf deploy.tar.gz deploy/
 
-          # 2. Upload via IAP tunnel
-          gcloud compute scp deploy.tar.gz elastic-search:/tmp/deploy.tar.gz \
-            --zone=asia-south1-a \
-            --tunnel-through-iap \
-            --quiet
+#           # 2. Upload via IAP tunnel
+#           gcloud compute scp deploy.tar.gz elastic-search:/tmp/deploy.tar.gz \
+#             --zone=asia-south1-a \
+#             --tunnel-through-iap \
+#             --quiet
 
-      - name: Create Local Deployment Script
-        # This step builds the script on the runner so the secrets are safely injected
-        run: |
-          cat << 'EOF' > deploy.sh
-          #!/bin/bash
-          set -e
+#       - name: Create Local Deployment Script
+#         # This step builds the script on the runner so the secrets are safely injected
+#         run: |
+#           cat << 'EOF' > deploy.sh
+#           #!/bin/bash
+#           set -e
 
-          # Install Ansible (only if not present)
-          if ! command -v ansible-playbook >/dev/null 2>&1; then
-            sudo apt-get update && sudo apt-get install -y ansible
-          fi
+#           # Install Ansible (only if not present)
+#           if ! command -v ansible-playbook >/dev/null 2>&1; then
+#             sudo apt-get update && sudo apt-get install -y ansible
+#           fi
 
-          # Extract and run
-          cd /tmp
-          tar -xzf deploy.tar.gz
-          cd deploy/ansible
-          EOF
+#           # Extract and run
+#           cd /tmp
+#           tar -xzf deploy.tar.gz
+#           cd deploy/ansible
+#           EOF
 
-          # Append the ansible playbook execution with your variables
-          echo "ansible-playbook -i inventory.ini deploy.yml \
-            -e \"strapi_image=${{ needs.build-and-push.outputs.strapi_tag }}\"
-            -e \"db_host=${{ secrets.DB_HOST }}\" \
-            -e \"db_password=${{ secrets.DB_PASSWORD }}\" \
-            -e \"region=${{ env.REGION }}\"" >> deploy.sh
+#           # Append the ansible playbook execution with your variables
+#           echo "ansible-playbook -i inventory.ini deploy.yml \
+#             -e \"strapi_image=${{ needs.build-and-push.outputs.strapi_tag }}\"
+#             -e \"db_host=${{ secrets.DB_HOST }}\" \
+#             -e \"db_password=${{ secrets.DB_PASSWORD }}\" \
+#             -e \"region=${{ env.REGION }}\"" >> deploy.sh
 
-          chmod +x deploy.sh
-          cat deploy.sh
+#           chmod +x deploy.sh
 
-      - name: Run Ansible Locally on VM
-        uses: 'google-github-actions/ssh-compute@v2'
-        with:
-          instance_name: 'elastic-search'
-          zone: 'asia-south1-a'
-          ssh_private_key: '${{ secrets.VM_SSH_KEY }}'
-          user: ubuntu
-          script: './deploy.sh'
+#       - name: Run Ansible Locally on VM
+#         uses: 'google-github-actions/ssh-compute@v2'
+#         with:
+#           instance_name: 'elastic-search'
+#           zone: 'asia-south1-a'
+#           ssh_private_key: '${{ secrets.VM_SSH_KEY }}'
+#           user: ubuntu
+#           script: './deploy.sh'
 
       # - uses: actions/checkout@v4
 
@@ -267,3 +266,66 @@ jobs:
       #       -e "db_host=${{ secrets.DB_HOST }}" \
       #       -e "db_password=${{ secrets.DB_PASSWORD }}" \
       #       -e "region=${{ env.REGION }}"
+  deploy:
+#    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Prepare and Upload Deployment Package
+        run: |
+          # 1. Create a clean deployment folder
+          mkdir -p deploy_pkg
+          cp -r ansible deploy_pkg/
+          cp docker-compose.yml deploy_pkg/
+
+          # 2. Create the shell script that will run ON the VM
+          cat << EOF > deploy_pkg/run_ansible.sh
+          #!/bin/bash
+          set -e
+          echo "Starting local deployment on VM..."
+
+          # Install Ansible if not present
+          if ! command -v ansible-playbook &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y ansible
+          fi
+
+          cd /tmp/deploy_pkg/ansible
+          
+          # Execute Ansible locally
+          ansible-playbook -i inventory.ini deploy.yml \
+            -e "strapi_image=${{ needs.build-and-push.outputs.strapi_tag }}" \
+            -e "frontend_image=${{ needs.build-and-push.outputs.frontend_tag }}" \
+            -e "db_host=${{ secrets.DB_HOST }}" \
+            -e "db_password=${{ secrets.DB_PASSWORD }}" \
+            -e "region=${{ env.REGION }}"
+          EOF
+
+          chmod +x deploy_pkg/run_ansible.sh
+
+          # 3. Zip it up
+          tar -czf deploy.tar.gz deploy_pkg/
+
+          # 4. Upload to VM using IAP
+          gcloud compute scp deploy.tar.gz elastic-search:/tmp/deploy.tar.gz \
+            --zone=asia-south1-a \
+            --tunnel-through-iap \
+            --quiet
+
+      - name: Execute Deployment on VM
+        run: |
+          # We use a single, simple command to trigger the uploaded script
+          gcloud compute ssh elastic-search \
+            --zone=asia-south1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="cd /tmp && tar -xzf deploy.tar.gz && bash /tmp/deploy_pkg/run_ansible.sh"
