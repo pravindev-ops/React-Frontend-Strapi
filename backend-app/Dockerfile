@@ -1,29 +1,20 @@
-FROM node:20-alpine AS builder
+FROM node:18-alpine
+# Installing libvips-dev is often required for Strapi image processing
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev vips-dev > /dev/null 2>&1
 
-WORKDIR /app
+WORKDIR /opt/app
 
-RUN apk add --no-cache build-base python3 gcc g++ make
+# Copy lock files first for caching
+COPY package.json package-lock.json ./
 
-COPY package*.json ./
-
+# Install dependencies
 RUN npm ci
 
+# Copy the rest of the application
 COPY . .
 
+# Build the Strapi admin panel
 RUN npm run build
 
-FROM node:20-alpine
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-RUN apk add --no-cache vips
-
-COPY --from=builder /app ./
-
-RUN npm prune --omit=dev
-
 EXPOSE 1337
-
 CMD ["npm", "run", "start"]
