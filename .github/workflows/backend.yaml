@@ -309,7 +309,6 @@ jobs:
             -e "db_password=${{ secrets.DB_PASSWORD }}" \
             -e "region=${{ env.REGION }}"
           EOF
-
           chmod +x deploy_pkg/run_ansible.sh
 
           # 3. Zip it up
