@@ -1,7 +1,7 @@
 - name: Deploy Strapi and Frontend via IAP
   hosts: webservers
   become: yes
-  gather_facts: no  # <--- MUST BE NO
+  gather_facts: no
   tasks:
     - name: Create project folder
       file:
