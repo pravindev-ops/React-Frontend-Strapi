@@ -178,13 +178,10 @@ jobs:
           instance_name: 'elastic-search'
           zone: 'asia-south1-a'
           ssh_private_key: '${{ secrets.VM_SSH_KEY }}'
+          user: ubuntu
           # This runs INSIDE the VM
           # We removed the comments and used a cleaner multiline structure
           command: |
-            set -e
-            if ! command -v ansible-playbook >/dev/null 2>&1; then
-              sudo apt-get update && sudo apt-get install -y ansible
-            fi
             cd /tmp
             tar -xzf deploy.tar.gz
             cd deploy/ansible
