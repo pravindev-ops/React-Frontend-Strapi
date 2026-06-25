@@ -199,6 +199,7 @@ jobs:
             -e \"region=${{ env.REGION }}\"" >> deploy.sh
 
           chmod +x deploy.sh
+          cat deploy.sh
 
       - name: Run Ansible Locally on VM
         uses: 'google-github-actions/ssh-compute@v2'
@@ -207,9 +208,8 @@ jobs:
           zone: 'asia-south1-a'
           ssh_private_key: '${{ secrets.VM_SSH_KEY }}'
           user: ubuntu
-          # USE THE SCRIPT INPUT - This fixes the multiline parsing crash!
           script: './deploy.sh'
-          
+
       # - uses: actions/checkout@v4
 
       # - id: auth
