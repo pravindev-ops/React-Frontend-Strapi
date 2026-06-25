@@ -176,6 +176,7 @@ jobs:
         env:
           CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
           ANSIBLE_HOST_KEY_CHECKING: "False"
+          ANSIBLE_REMOTE_TEMP: /tmp/.ansible-${{ github.run_id }}
         run: |
           ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
             -e "strapi_image=4a1fc39" \
