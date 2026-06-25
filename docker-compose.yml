@@ -9,13 +9,13 @@ services:
     volumes:
       - strapi_uploads:/opt/app/public/uploads
 
-  frontend:
-    image: ${FRONTEND_IMAGE}
-    restart: always
-    ports:
-      - "80:3000"
-    environment:
-      - BACKEND_URL=http://${VM_IP}:1337
+  # frontend:
+  #   image: ${FRONTEND_IMAGE}
+  #   restart: always
+  #   ports:
+  #     - "80:3000"
+  #   environment:
+  #     - BACKEND_URL=http://${VM_IP}:1337
 
 volumes:
   strapi_uploads:
