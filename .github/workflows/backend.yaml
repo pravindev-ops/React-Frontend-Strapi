@@ -147,8 +147,8 @@ jobs:
 #    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-
       - uses: actions/checkout@v4
+
       - id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -160,17 +160,45 @@ jobs:
 
       - name: Bundle and Upload Files
         run: |
-          # Create a deployment package
+          # 1. Create a deployment package
           mkdir -p deploy
           cp -r ansible/ deploy/
           cp docker-compose.yml deploy/
           tar -czf deploy.tar.gz deploy/
 
-          # Upload via IAP tunnel
+          # 2. Upload via IAP tunnel
           gcloud compute scp deploy.tar.gz elastic-search:/tmp/deploy.tar.gz \
             --zone=asia-south1-a \
             --tunnel-through-iap \
             --quiet
+
+      - name: Create Local Deployment Script
+        # This step builds the script on the runner so the secrets are safely injected
+        run: |
+          cat << 'EOF' > deploy.sh
+          #!/bin/bash
+          set -e
+
+          # Install Ansible (only if not present)
+          if ! command -v ansible-playbook >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y ansible
+          fi
+
+          # Extract and run
+          cd /tmp
+          tar -xzf deploy.tar.gz
+          cd deploy/ansible
+          EOF
+
+          # Append the ansible playbook execution with your variables
+          echo "ansible-playbook -i inventory.ini deploy.yml \
+            -e \"strapi_image=${{ needs.build-and-push.outputs.strapi_tag }}\" \
+            -e \"frontend_image=${{ needs.build-and-push.outputs.frontend_tag }}\" \
+            -e \"db_host=${{ secrets.DB_HOST }}\" \
+            -e \"db_password=${{ secrets.DB_PASSWORD }}\" \
+            -e \"region=${{ env.REGION }}\"" >> deploy.sh
+
+          chmod +x deploy.sh
 
       - name: Run Ansible Locally on VM
         uses: 'google-github-actions/ssh-compute@v2'
@@ -179,18 +207,9 @@ jobs:
           zone: 'asia-south1-a'
           ssh_private_key: '${{ secrets.VM_SSH_KEY }}'
           user: ubuntu
-          # This runs INSIDE the VM
-          # We removed the comments and used a cleaner multiline structure
-          command: 'echo Hello world'
-            # cd /tmp
-            # tar -xzf deploy.tar.gz
-            # cd deploy/ansible
-            # ansible-playbook -i inventory.ini deploy.yml \
-            #   -e "strapi_image=4a1fc39" \
-            #   -e "db_host=${{ secrets.DB_HOST }}" \
-            #   -e "db_password=${{ secrets.DB_PASSWORD }}" \
-            #   -e "region=${{ env.REGION }}"
-
+          # USE THE SCRIPT INPUT - This fixes the multiline parsing crash!
+          script: './deploy.sh'
+          
       # - uses: actions/checkout@v4
 
       # - id: auth
