@@ -181,15 +181,15 @@ jobs:
           user: ubuntu
           # This runs INSIDE the VM
           # We removed the comments and used a cleaner multiline structure
-          command: |
-            cd /tmp
-            tar -xzf deploy.tar.gz
-            cd deploy/ansible
-            ansible-playbook -i inventory.ini deploy.yml \
-              -e "strapi_image=4a1fc39" \
-              -e "db_host=${{ secrets.DB_HOST }}" \
-              -e "db_password=${{ secrets.DB_PASSWORD }}" \
-              -e "region=${{ env.REGION }}"
+          command: 'echo Hello world'
+            # cd /tmp
+            # tar -xzf deploy.tar.gz
+            # cd deploy/ansible
+            # ansible-playbook -i inventory.ini deploy.yml \
+            #   -e "strapi_image=4a1fc39" \
+            #   -e "db_host=${{ secrets.DB_HOST }}" \
+            #   -e "db_password=${{ secrets.DB_PASSWORD }}" \
+            #   -e "region=${{ env.REGION }}"
 
       # - uses: actions/checkout@v4
 
