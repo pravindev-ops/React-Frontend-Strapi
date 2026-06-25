@@ -192,8 +192,7 @@ jobs:
 
           # Append the ansible playbook execution with your variables
           echo "ansible-playbook -i inventory.ini deploy.yml \
-            -e \"strapi_image=${{ needs.build-and-push.outputs.strapi_tag }}\" \
-            -e \"frontend_image=${{ needs.build-and-push.outputs.frontend_tag }}\" \
+            -e \"strapi_image=${{ needs.build-and-push.outputs.strapi_tag }}\"
             -e \"db_host=${{ secrets.DB_HOST }}\" \
             -e \"db_password=${{ secrets.DB_PASSWORD }}\" \
             -e \"region=${{ env.REGION }}\"" >> deploy.sh
