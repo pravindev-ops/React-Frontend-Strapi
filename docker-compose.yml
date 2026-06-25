@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   strapi:
-    image: ${STRAPI_IMAGE}
+    image: asia-south1-docker.pkg.dev/gke-arena/preveen-repo/strapi-backend:4a1fc39
     restart: always
     env_file: .env
     ports:
